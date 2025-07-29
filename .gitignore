@@ -210,5 +210,3 @@ __marimo__/
 build/
 log/
 install/
-
-dnn_origin_pkg/dnn_node_example/config/common/*
