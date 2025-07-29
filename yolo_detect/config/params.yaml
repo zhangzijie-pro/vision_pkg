@@ -1,0 +1,7 @@
+yolo_detect:
+  ros__parameters:
+    feed_type: 0
+    yolo_detect_config_file: "config/config.json"
+    image: "config/test.jpg"
+    pushlisher_node_name: "YOLO/Point_msg"
+    subscription_node_name: "YOLO/Camera_Image"

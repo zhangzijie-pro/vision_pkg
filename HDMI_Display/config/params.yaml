@@ -1,0 +1,4 @@
+HDMI_Display:
+  ros__parameters:
+    subscription_yolo_topic_name: "image_raw"
+    subscription_img_topic_name: "yolo_detections"

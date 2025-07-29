@@ -1,0 +1,7 @@
+{
+	"model_file": "/app/pydev/drone_yolov8n_detect_bayese_640x640_nv12/drone_yolov8n_detect_bayese_640x640_nv12_modified.bin",
+	"class_num": 1,
+	"nms_threshold": 0.7,
+	"score_threshold": 0.25,
+	"reg_max": 16
+}
