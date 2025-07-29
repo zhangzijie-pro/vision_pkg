@@ -30,7 +30,7 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='mipi_camera',
-            executable='hdmi_node',
+            executable='cam',
             output='screen',
             parameters=[param_file],
             arguments=['--ros-args', '--log-level', 'info']

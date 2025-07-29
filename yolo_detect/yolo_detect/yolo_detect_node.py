@@ -23,23 +23,26 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
 from cv_bridge import CvBridge
+from ament_index_python.packages import get_package_share_directory
+import os
 
-from lib import YOLOv8_Detect
+
+from .lib import YOLOv8_Detect
 from identify.msg import YoloDetection, YoloDetections
 
 names = ["drone"]
 
 
 class Detect(Node):
-    def __init__(self, name="YOLO/drone_detect"):
+    def __init__(self, name="yolo_detect_node"):
         super().__init__(name)
 
         # Declare parameters
-        self.declare_parameter('yolo_detect_config_file', './config/config.json')
+        self.declare_parameter('yolo_detect_config_file', 'config.json')
         self.declare_parameter('feed_type', 1)
-        self.declare_parameter('image', './config/test.jpg')
-        self.declare_parameter('pushlisher_node_name', 'YOLO/Point_msg')
-        self.declare_parameter('subscription_node_name', 'YOLO/Camera_Image')
+        self.declare_parameter('image', 'test.jpg')
+        self.declare_parameter('pushlisher_node_name', 'Point_msg')
+        self.declare_parameter('subscription_node_name', 'Camera_Image')
 
         # Get parameters
         feed_type = self.get_parameter('feed_type').value
@@ -120,13 +123,63 @@ class Detect(Node):
         self.publisher.publish(msg)
         # self.publish_msg_data.detections.clear()
 
-    def _read_config(self, feed_type: int, file_path: str, image_path: str) -> List[Union[list, cv2.Mat, CvBridge]]:
-        with open(file_path, 'r') as f:
+    # def _read_config(self, feed_type: int, file_path: str, image_path: str) -> List[Union[list, cv2.Mat, CvBridge]]:
+    #     with open(file_path, 'r') as f:
+    #         cfg = json.load(f)
+    #         model_path = cfg['model_path']
+    #         class_num = cfg['class_num']
+    #         nms_threshold = cfg['nms_threshold']
+    #         score_thres = cfg['score_thres']
+    #         reg_max = cfg['reg_max']
+
+    #     self.get_logger().info(
+    #         f"Model Path: {model_path}, Class Num: {class_num}, "
+    #         f"NMS Threshold: {nms_threshold}, Score Threshold: {score_thres}, Reg Max: {reg_max}"
+    #     )
+
+    #     config = [model_path, class_num, nms_threshold, score_thres, reg_max]
+
+    #     if feed_type:
+    #         bridge = CvBridge()
+    #         if len(self.subscription_topic.spilt('/')) > 1:
+    #             self.subscription = self.create_subscription(
+    #                 CompressedImage,
+    #                 self.subscription_topic,
+    #                 self.compress_img_callback,
+    #                 10
+    #             )
+    #         else:
+    #             self.subscription = self.create_subscription(
+    #                 Image,
+    #                 self.subscription_topic,
+    #                 self.img_callback,
+    #                 10
+    #             )
+    #         self.get_logger().info("Subscribed to YOLO/Camera_Image topic")
+    #         return [config, None, bridge]
+    #     else:
+    #         cv_image = cv2.imread(image_path)
+    #         return [config, cv_image, None]
+    def _read_config(self, feed_type: int, file_name: str, image_path: str) -> List[Union[list, cv2.Mat, CvBridge]]:
+        # 获取安装路径
+        try:
+            pkg_path = get_package_share_directory('yolo_detect')  # ← 你实际的包名
+        except Exception as e:
+            self.get_logger().error(f"Could not find package path: {e}")
+            raise e
+
+        config_path = os.path.join(pkg_path, 'config', file_name)
+
+        if not os.path.exists(config_path):
+            self.get_logger().error(f"Config file not found at: {config_path}")
+            raise FileNotFoundError(f"No such config: {config_path}")
+
+        with open(config_path, 'r') as f:
             cfg = json.load(f)
             model_path = cfg['model_path']
             class_num = cfg['class_num']
             nms_threshold = cfg['nms_threshold']
-            score_thres = cfg['score_thres']
+            score_thres = cfg['score_threshold']
             reg_max = cfg['reg_max']
 
         self.get_logger().info(
@@ -138,7 +191,7 @@ class Detect(Node):
 
         if feed_type:
             bridge = CvBridge()
-            if len(self.subscription_topic.spilt('/')) > 1:
+            if len(self.subscription_topic.split('/')) > 1:
                 self.subscription = self.create_subscription(
                     CompressedImage,
                     self.subscription_topic,
@@ -152,7 +205,7 @@ class Detect(Node):
                     self.img_callback,
                     10
                 )
-            self.get_logger().info("Subscribed to YOLO/Camera_Image topic")
+            self.get_logger().info(f"Subscribed to {self.subscription_topic}")
             return [config, None, bridge]
         else:
             cv_image = cv2.imread(image_path)

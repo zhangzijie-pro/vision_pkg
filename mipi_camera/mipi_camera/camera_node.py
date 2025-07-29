@@ -40,7 +40,6 @@ from cv_bridge import CvBridge
 from hobot_vio import libsrcampy
 import threading
 
-
 class MipiCam(Node):
     def __init__(self, name="mipicam_node"):
         super().__init__(name)
@@ -53,7 +52,7 @@ class MipiCam(Node):
 
         self.bridge = CvBridge()
         self.camera = libsrcampy.Camera()
-        self.camera.open_cam()
+        self.camera.open_cam(0, 1, 30, 1920, 1080)
 
         self.pub_raw = self.create_publisher(Image, self.img_topic_name, 10)
         self.pub_compressed = self.create_publisher(CompressedImage, self.compressimg_topic_name, 10)
@@ -66,7 +65,7 @@ class MipiCam(Node):
 
     def timer_callback(self):
         with self.lock:
-            nv12_img = self.camera.read_cam()
+            nv12_img = self.camera.get_img(2)
             if nv12_img is None:
                 self.get_logger().warn("未能读取摄像头图像")
                 return

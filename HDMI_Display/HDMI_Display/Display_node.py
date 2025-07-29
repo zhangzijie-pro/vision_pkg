@@ -16,88 +16,85 @@ import random
 import cv2
 from cv_bridge import CvBridge
 import numpy as np
-
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CompressedImage
-
 from hobot_vio import libsrcampy
 from identify.msg import YoloDetections
 
 
-def draw_detection(img, bbox, score, label) -> None:
-    """
-    Draws a detection bounding box and label on the image.
+def random_color(seed=None):
+    if seed is not None:
+        random.seed(seed)
+    return tuple(random.randint(0, 255) for _ in range(3))
 
-    Parameters:
-        img (np.array): The input image.
-        bbox (tuple[int, int, int, int]): A tuple containing the bounding box coordinates (x1, y1, x2, y2).
-        score (float): The detection score of the object.
-        class_id (int): The class ID of the detected object.
-    """
+
+def draw_detection(img, bbox, score, label, color=None) -> None:
     x1, y1, x2, y2 = bbox
-    color = (random.randint(0,255) for _ in range(3))
+    color = color or random_color(hash(label) % 256)
     cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-    label = f"{label}: {score:.2f}"
-    (label_width, label_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+
+    label_text = f"{label}: {score:.2f}"
+    (label_width, label_height), _ = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
     label_x, label_y = x1, y1 - 10 if y1 - 10 > label_height else y1 + 10
-    cv2.rectangle(
-        img, (label_x, label_y - label_height), (label_x + label_width, label_y + label_height), color, cv2.FILLED
-    )
-    cv2.putText(img, label, (label_x, label_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+    cv2.rectangle(img, (label_x, label_y - label_height), (label_x + label_width, label_y), color, cv2.FILLED)
+    cv2.putText(img, label_text, (label_x, label_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
 
 
 class DisplayNode(Node):
     def __init__(self):
         super().__init__("yolo_display_node")
 
-        self.declare_parameter('subscription_yolo_topic_name', 'image_raw')
-        self.declare_parameter('subscription_img_topic_name', 'yolo_detections')
+        self.declare_parameter('image_rendering', 1)
+        self.declare_parameter('subscription_yolo_topic_name', 'yolo_detections')
+        self.declare_parameter('subscription_img_topic_name', 'image_raw')
 
-        self.yolo_node = self.get_parameter('subscription_yolo_topic_name').value
-        self.image_node = self.get_parameter('subscription_img_topic_name').value
+        self.rendering_flag = self.get_parameter('image_rendering').value
+        self.yolo_topic = self.get_parameter('subscription_yolo_topic_name').value
+        self.image_topic = self.get_parameter('subscription_img_topic_name').value
 
         self.bridge = CvBridge()
         self.display = libsrcampy.Display()
-        self.display.open()
-
-        if len(self.image_node.split("/")) > 1:
-            self.sub_image = self.create_subscription(CompressedImage, self.yolo_node, self.compress_image_callback, 10)
-        else:
-            self.sub_image = self.create_subscription(Image, self.yolo_node, self.image_callback, 10)
-            
-        self.sub_yolo = self.create_subscription(YoloDetections, self.image_raw, self.yolo_callback, 10)
+        self.display.display(0, 1920, 1080, 0, 1)
 
         self.latest_detections = []
         self.current_frame = None
 
+        # 订阅图像
+        if '/' in self.image_topic:
+            self.sub_image = self.create_subscription(CompressedImage, self.image_topic, self.compress_image_callback, 10)
+        else:
+            self.sub_image = self.create_subscription(Image, self.image_topic, self.image_callback, 10)
+
+        # 订阅目标检测
+        if self.rendering_flag:
+            self.sub_yolo = self.create_subscription(YoloDetections, self.yolo_topic, self.yolo_callback, 10)
+
     def yolo_callback(self, msg):
         self.latest_detections = msg.detections
+        self.get_logger().debug(f"Received {len(self.latest_detections)} detections")
+
+    def handle_frame(self, frame):
+        if frame is None:
+            return
+
+        if self.rendering_flag and self.latest_detections:
+            for det in self.latest_detections:
+                bbox = int(det.x_min), int(det.y_min), int(det.x_max), int(det.y_max)
+                draw_detection(frame, bbox, det.confidence, det.target_name)
+
+        self.display.set_img(frame)
 
     def compress_image_callback(self, msg):
-        np_arr = np.frombuffer(msg.data, np.uint8)
-        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-        for det in self.latest_detections:
-            bbox = int(det.x_min), int(det.y_min), int(det.x_max), int(det.y_max)
-            label = det.target_name
-            score = det.confidence
-
-            draw_detection(frame, bbox, score, label)
-
-        self.display.show(frame)
+        frame = cv2.imdecode(np.frombuffer(msg.data, np.uint8), cv2.IMREAD_COLOR)
+        self.handle_frame(frame)
 
     def image_callback(self, msg):
-        frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-
-        for det in self.latest_detections:
-            bbox = int(det.x_min), int(det.y_min), int(det.x_max), int(det.y_max)
-            label = det.target_name
-            score = det.confidence
-
-            draw_detection(frame, bbox, score, label)
-
-        self.display.show(frame)
+        try:
+            frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+            self.handle_frame(frame)
+        except Exception as e:
+            self.get_logger().error(f"CV bridge failed: {e}")
 
     def destroy_node(self):
         self.display.close()
@@ -107,6 +104,10 @@ class DisplayNode(Node):
 def main():
     rclpy.init()
     node = DisplayNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info("Shutting down display node...")
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()

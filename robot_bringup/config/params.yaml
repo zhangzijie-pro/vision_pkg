@@ -1,10 +1,10 @@
 yolo_detect:
   ros__parameters:
     feed_type: 0
-    yolo_detect_config_file: "config/config.json"
-    image: "config/test.jpg"
-    pushlisher_node_name: "YOLO/Point_msg"
-    subscription_node_name: "YOLO/Camera_Image"
+    yolo_detect_config_file: "config.json"
+    image: "test.jpg"
+    pushlisher_node_name: "Point_msg"
+    subscription_node_name: "Camera_Image"
 
 mipi_camera_path:
   ros__parameters:
@@ -13,5 +13,6 @@ mipi_camera_path:
 
 HDMI_Display:
   ros__parameters:
+    image_rendering: 1
     subscription_yolo_topic_name: "image_raw"
     subscription_img_topic_name: "yolo_detections"
