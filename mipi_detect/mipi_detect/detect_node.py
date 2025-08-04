@@ -30,12 +30,16 @@ from hobot_vio import libsrcampy
 from .lib import YOLOv8_Detect, draw_detection
 from identify.msg import YoloDetection, YoloDetections
 
+sensor_width = 1920
+sensor_height = 1080
+names = ["drone"]
+
 h, w = 1080, 1920
 
 def get_display_res():
     disp_w_small=1920
     disp_h_small=1080
-    disp = srcampy.Display()
+    disp = libsrcampy.Display()
     resolution_list = disp.get_display_res()
     if (sensor_width, sensor_height) in resolution_list:
         print(f"Resolution {sensor_width}x{sensor_height} exists in the list.")
@@ -100,7 +104,7 @@ class Detect(Node):
     def time_callback(self):
         nv12_img = self.camera.get_img(2, self.w, self.h)
         if nv12_img is None:
-            self.get_logger().warn("未能读取摄像头图像")
+            self.get_logger().warn("Can't read camera image. it's None")
             return
 
         nv12_img = np.frombuffer(nv12_img, dtype=np.uint8)
@@ -128,8 +132,8 @@ class Detect(Node):
             if score < self.score_thres:
                 continue
 
-            bbox = (x1, y1, x2, y2)
-            draw_detection(cv_image, bbox, score, class_id)
+            #bbox = (x1, y1, x2, y2)
+            # draw_detection(cv_image, bbox, score, class_id)
             mid_x, mid_y = (x1 + x2) // 2, (y1 + y2) // 2
 
             det = YoloDetection()
@@ -142,11 +146,10 @@ class Detect(Node):
             msg.detections.append(det)
 
             # Display overlay via hardware
-            self.disp.set_graph_rect(3, x1, y1, x2, y2, (0, 255, 0))
+            self.disp.set_graph_rect(x1, y1, x2, y2, 3, 1, (0, 255, 0))
             label = f"{det.target_name} {score:.2f}"
-            self.disp.set_graph_word(3, x1, y1 - 10, label, (0, 255, 0))
+            self.disp.set_graph_word(x1, y1 - 2, label, 3, 1 (0, 255, 0))
 
-        # self.publisher.publish(self.array)
         self.publisher.publish(msg)
 
     def destroy_node(self):
