@@ -86,9 +86,10 @@ class Detect(Node):
         self.score_thres = self.model_config[3]
 
         # Get model input size
-        self.h, self.w = self.model.input_height, self.model.input_width
+        self.h, self.w = self.model.input_H, self.model.input_W
         self.sensor_h, self.sensor_w = 1080, 1920  # Modify based on actual sensor config
         self.camera.open_cam(0, -1, -1, [self.w, disp_w], [self.h, disp_h], self.sensor_h, self.sensor_w)
+        # self.camera.open_cam(0, -1, 30, [self.w, disp_w], [self.h, disp_h], self.sensor_h, self.sensor_w)
 
         self.disp = libsrcampy.Display()
         self.disp.display(0, disp_w, disp_h)
@@ -97,6 +98,7 @@ class Detect(Node):
         
         self.timer = self.create_timer(1.0 / 30.0, self.time_callback)
         
+        self.data = []
         self.get_logger().info(f"Feed Type: {feed_type}, Config Path: {config_path}, Image Path: {image_path}")
         
         self.get_logger().info(f"Detect Model initialized with model: {self.model_path}")
@@ -132,7 +134,7 @@ class Detect(Node):
             if score < self.score_thres:
                 continue
 
-            #bbox = (x1, y1, x2, y2)
+            bbox = (x1, y1, x2, y2)
             # draw_detection(cv_image, bbox, score, class_id)
             mid_x, mid_y = (x1 + x2) // 2, (y1 + y2) // 2
 
@@ -145,12 +147,40 @@ class Detect(Node):
             det.x_min, det.y_min, det.x_max, det.y_max = x1, y1, x2, y2
             msg.detections.append(det)
 
+            self.data.append([bbox,det.target_name])
             # Display overlay via hardware
-            self.disp.set_graph_rect(x1, y1, x2, y2, 3, 1, (0, 255, 0))
-            label = f"{det.target_name} {score:.2f}"
-            self.disp.set_graph_word(x1, y1 - 2, label, 3, 1 (0, 255, 0))
+            # self.disp.set_graph_rect(x1, y1, x2, y2, 3, 1, (0, 255, 0))
+            # label = f"{det.target_name} {score:.2f}"
+            # self.disp.set_graph_word(x1, y1 - 2, label, 3, 1 (0, 255, 0))
 
+        self.draw_hardware_rect()
         self.publisher.publish(msg)
+
+    def draw_hardware_rect(self):
+        if self.data is None:
+            return
+        
+        for index, result in enumerate(self.data):
+            bbox = result[0]
+            label = result[1]
+
+            label = label.encode('gb2312')
+            box_color_ARGB = 0xffff00ff
+
+            if index == 0:
+                self.disp.set_graph_rect(
+                    bbox[0], bbox[1], bbox[2], bbox[3],
+                    3, 1,box_color_ARGB)
+                self.disp.set_graph_word(
+                    bbox[0], bbox[3], label,
+                    3, 1, box_color_ARGB)
+            else:
+                self.disp.set_graph_rect(
+                    bbox[0], bbox[1], bbox[2], bbox[3],
+                    3, 0, box_color_ARGB)
+                self.disp.set_graph_word(
+                    bbox[0], bbox[3], label,
+                    3, 0, box_color_ARGB)
 
     def destroy_node(self):
         self.camera.close_cam()
