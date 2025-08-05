@@ -39,6 +39,7 @@ from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge
 from hobot_vio import libsrcampy
 import threading
+import numpy as np
 
 class MipiCam(Node):
     def __init__(self, name="mipicam_node"):
@@ -59,7 +60,7 @@ class MipiCam(Node):
 
         self.timer = self.create_timer(1.0 / 30.0, self.timer_callback)
 
-        self.lock = threading.Lock()
+        # self.lock = threading.Lock()
 
         self.get_logger().info("MipiCam node initialized and publishing.")
 
@@ -70,27 +71,30 @@ class MipiCam(Node):
                 self.get_logger().warn("未能读取摄像头图像")
                 return
 
-            try:
-                h, w = 1080, 1920
-                bgr_img = cv2.cvtColor(nv12_img.reshape((int(h * 1.5), w)), cv2.COLOR_YUV2BGR_NV12)
+            nv12_np = nv12_np.reshape((int(h * 1.5), w))
+            bgr_img = cv2.cvtColor(nv12_np, cv2.COLOR_YUV2BGR_NV12)
 
-                img_msg = self.bridge.cv2_to_imgmsg(bgr_img, encoding="bgr8")
-                img_msg.header.stamp = self.get_clock().now().to_msg()
-                self.pub_raw.publish(img_msg)
+            img_msg = self.bridge.cv2_to_imgmsg(bgr_img, encoding="bgr8")
+            img_msg.header.stamp = self.get_clock().now().to_msg()
+            self.pub_raw.publish(img_msg)
+            self.get_logger().info("send img")
 
-                success, buffer = cv2.imencode('.jpg', bgr_img, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
-                if not success:
-                    self.get_logger().warn("图像 JPEG 编码失败")
-                    return
+            success, buffer = cv2.imencode('.jpg', bgr_img, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+            if not success:
+                self.get_logger().warn("图像 JPEG 编码失败")
+                return
 
-                comp_msg = CompressedImage()
-                comp_msg.header = img_msg.header
-                comp_msg.format = "jpeg"
-                comp_msg.data = buffer.tobytes()
-                self.pub_compressed.publish(comp_msg)
+            comp_msg = CompressedImage()
+            comp_msg.header = img_msg.header
+            comp_msg.format = "jpeg"
+            comp_msg.data = buffer.tobytes()
+            self.pub_compressed.publish(comp_msg)
+            self.get_logger().info("send compress img")
 
-            except Exception as e:
-                self.get_logger().error(f"图像处理失败: {e}")
+        # except Exception as e:
+        #     self.get_logger().error(f"图像处理失败: {e}")
+
+
 
     def destroy_node(self):
         self.camera.close_cam()
@@ -101,14 +105,16 @@ class MipiCam(Node):
 def main():
     rclpy.init()
     node = MipiCam()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+    # executor = MultiThreadedExecutor()
+    # executor.add_node(node)
 
-    executor = MultiThreadedExecutor()
-    executor.add_node(node)
-
-    try:
-        executor.spin()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+    # try:
+    #     executor.spin()
+    # except KeyboardInterrupt:
+    #     pass
+    # finally:
+    #     node.destroy_node()
+    #     rclpy.shutdown()

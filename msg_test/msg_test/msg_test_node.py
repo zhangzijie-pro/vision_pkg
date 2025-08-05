@@ -12,7 +12,7 @@ class MsgNode(Node):
         # 订阅话题
         self.subscription = self.create_subscription(
             YoloDetections,
-            'yolo_detections',
+            'ai_msg',
             self.listener_callback,
             10
         )

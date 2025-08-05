@@ -41,8 +41,8 @@ class Detect(Node):
         self.declare_parameter('yolo_detect_config_file', 'config.json')
         self.declare_parameter('feed_type', 1)
         self.declare_parameter('image', 'test.jpg')
-        self.declare_parameter('pushlisher_node_name', 'Point_msg')
-        self.declare_parameter('subscription_node_name', 'Camera_Image')
+        self.declare_parameter('pushlisher_node_name', 'yolo_detections')
+        self.declare_parameter('subscription_node_name', 'image_raw')
 
         # Get parameters
         feed_type = self.get_parameter('feed_type').value
@@ -95,11 +95,16 @@ class Detect(Node):
         outputs = self.model.c2numpy(self.model.forward(input_tensor))
         results = self.model.postProcess(outputs)
 
+        if not results:
+            self.get_logger().info("No detections found.")
+            return  # 检测为空，直接返回，不发布消息
+    
         # 构造新的检测消息
         msg = YoloDetections()
         msg.stamp = self.get_clock().now().to_msg()
         msg.detections = []
-
+        self.get_logger().info(f"{len(results)}")
+        
         for class_id, score, x1, y1, x2, y2 in results:
             # self.get_logger().info(f"Detected: class_id={class_id}, score={score}")
             if score < self.score_thres:
@@ -160,6 +165,7 @@ class Detect(Node):
     #     else:
     #         cv_image = cv2.imread(image_path)
     #         return [config, cv_image, None]
+
     def _read_config(self, feed_type: int, file_name: str, image_path: str) -> List[Union[list, cv2.Mat, CvBridge]]:
         # 获取安装路径
         try:

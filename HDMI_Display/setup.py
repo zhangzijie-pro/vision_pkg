@@ -26,7 +26,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'hdmi_node = HDMI_Display.hdmi_display_node:main',
+            'hdmi_node = HDMI_Display.Display_node:main',
         ],
     },
 )
