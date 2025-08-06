@@ -1,4 +1,0 @@
-mipi_camera_path:
-  ros__parameters:
-    publisher_img_topic_name: "image_raw"
-    publisher_compressimg_topic_name: "image_raw/compress_img"
