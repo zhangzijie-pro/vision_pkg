@@ -72,14 +72,19 @@ class Detect(Node):
         self.declare_parameter('yolo_detect_config_file', 'config.json')
         # self.declare_parameter('feed_type', 1)
         # self.declare_parameter('image', 'test.jpg')
-        self.declare_parameter('pushlisher_node_name', 'ai_msg')
+        self.declare_parameter('pushlisher_node_name', '/yolo_detections')
 
         # Get parameters
         # feed_type = self.get_parameter('feed_type').value
         # image_path = self.get_parameter('image').value
         config_path = self.get_parameter('yolo_detect_config_file').value
         self.publisher_topic = self.get_parameter('pushlisher_node_name').value
-
+        self.publisher = self.create_publisher(
+            YoloDetections,
+            "/yolo_detections",
+            10
+        )
+        
         self.camera = libsrcampy.Camera()
         self.model_config= self._read_config(config_path)
         self.model = YOLOv8_Detect(*self.model_config)
@@ -99,15 +104,14 @@ class Detect(Node):
         self.disp.display(0, disp_w, disp_h)
         libsrcampy.bind(self.camera, self.disp)
         self.disp.display(3, disp_w, disp_h)
-        
+
+
         self.timer = self.create_timer(1.0 / 30.0, self.time_callback)
-        self.publisher = self.create_publisher(
-            YoloDetections,
-            self.publisher_topic,
-            10
-        )
+
 
         self.data = []
+        self.get_logger().info(f"publisher Name: {self.publisher_topic}")
+
         self.get_logger().info(f"Config Path: {config_path}")
         self.get_logger().info(f"display width: {disp_w}, display height: {disp_h}")
         
@@ -138,7 +142,7 @@ class Detect(Node):
         # 构造新的检测消息
         msg = YoloDetections()
         msg.stamp = self.get_clock().now().to_msg()
-        msg.detections = []
+        # msg.detections = []
 
         for class_id, score, x1, y1, x2, y2 in results:
             if score < self.score_thres:
@@ -158,6 +162,10 @@ class Detect(Node):
             det.x_min, det.y_min, det.x_max, det.y_max = x1, y1, x2, y2
             msg.detections.append(det)
 
+            self.get_logger().info(f"name: {det.target_name}")
+            self.get_logger().info(f"x1: {x1}, y1: {y1}, x2: {x2}, y2: {y2}")
+            
+
             # self.data.append([bbox,det.target_name])
             # self.draw_hardware_rect()
 
@@ -167,9 +175,21 @@ class Detect(Node):
             label = label.encode('gb2312')
 
             self.disp.set_graph_word(x1, y1 - 2, label, 3, 1, 0xffff00ff)
+        
+        if len(msg.detections) >=1:
+            self.publisher.publish(msg)
+            # self.get_logger().info("Send successfully")
+        else:
+            det = YoloDetection()
+            det.target_name="none"
+            det.confidence = float(0.7)
+            det.cx, det.cy = 544, 684
+            det.image_height, det.image_width = 1920,1080
+            det.x_min, det.y_min, det.x_max, det.y_max = 544, 648,457,129
+            msg.detections.append(det)
+            self.publisher.publish(msg)
 
-
-        self.publisher.publish(msg)
+        self.get_logger().info(f"msg: {msg}")   
 
     def draw_hardware_rect(self):
         if self.data is None:
