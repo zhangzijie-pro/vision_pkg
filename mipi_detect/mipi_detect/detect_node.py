@@ -157,7 +157,7 @@ class Detect(Node):
         # msg.detections = []
 
         for class_id, score, x1, y1, x2, y2 in results:
-            if score < self.score_thres:
+            if score < self.score_thres or class_id != 0:
                 continue
 
             bbox = (x1, y1, x2, y2)
@@ -210,15 +210,15 @@ class Detect(Node):
                     self.get_logger().warning("draw_queue full, dropping this frame's draw batch")
             self.publisher.publish(msg)
             # self.get_logger().info("Send successfully")
-        else:
-            det = YoloDetection()
-            det.target_name="none"
-            det.confidence = float(0.7)
-            det.cx, det.cy = 544, 684
-            det.image_height, det.image_width = 1920,1080
-            det.x_min, det.y_min, det.x_max, det.y_max = 544, 648,457,129
-            msg.detections.append(det)
-            self.publisher.publish(msg)
+        # else:
+        #     det = YoloDetection()
+        #     det.target_name="none"
+        #     det.confidence = float(0.7)
+        #     det.cx, det.cy = 544, 684
+        #     det.image_height, det.image_width = 1920,1080
+        #     det.x_min, det.y_min, det.x_max, det.y_max = 544, 648,457,129
+        #     msg.detections.append(det)
+        #     self.publisher.publish(msg)
 
         self.get_logger().debug(f"msg: {msg}")   
     
