@@ -1,6 +1,10 @@
 yolo_detect:
   ros__parameters:
-    # feed_type: 0
+    multi_threading: False
+    crop_edges: False
+    crop_h_ratio: 0.8
+    crop_resize: False
+    crop_w_ratio: 1
+
     yolo_detect_config_file: "config.json"
-    # image: "test.jpg"
     pushlisher_node_name: "yolo_detections"
