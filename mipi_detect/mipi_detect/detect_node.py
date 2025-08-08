@@ -40,6 +40,12 @@ names = ["drone"]
 h, w = 1080, 1920
 
 def get_display_res():
+    """
+    Get support display size
+
+    Returns:
+        W, H
+    """
     disp_w_small=1920
     disp_h_small=1080
     disp = libsrcampy.Display()
@@ -72,16 +78,25 @@ class Detect(Node):
         super().__init__(name)
 
         # Declare parameters
+        self.declare_parameter('multi_threading', 0)
+        self.declare_parameter('crop_edges', False)
+        self.declare_parameter('crop_h_ratio', 0.8)
+        self.declare_parameter('crop_resize', False)
+        self.declare_parameter('crop_w_ratio', 1)
         self.declare_parameter('yolo_detect_config_file', 'config.json')
-        # self.declare_parameter('feed_type', 1)
-        # self.declare_parameter('image', 'test.jpg')
         self.declare_parameter('pushlisher_node_name', '/yolo_detections')
 
         # Get parameters
-        # feed_type = self.get_parameter('feed_type').value
-        # image_path = self.get_parameter('image').value
+        self.thread_flag = self.get_parameter('multi_threading').value
+
+        self.crop_edges = self.get_parameter('crop_edges').value
+        self.crop_h_ratio = self.get_parameter('crop_h_ratio').value
+        self.crop_resize = self.get_parameter('crop_resize').value
+        self.crop_w_ratio = self.get_parameter('crop_w_ratio').value
+
         config_path = self.get_parameter('yolo_detect_config_file').value
         self.publisher_topic = self.get_parameter('pushlisher_node_name').value
+
         self.publisher = self.create_publisher(
             YoloDetections,
             "/yolo_detections",
@@ -97,6 +112,7 @@ class Detect(Node):
         # Get model input size
         self.h, self.w = self.model.input_H, self.model.input_W
         # self.h, self.w = 1080, 1920
+
         self.sensor_h, self.sensor_w = 1080, 1920  # Modify based on actual sensor config
         # self.camera.open_cam(0, -1, -1, [self.w, disp_w], [self.h, disp_h], self.sensor_h, self.sensor_w)
         self.camera.open_cam(0, -1, 30, [self.w, disp_w], [self.h, disp_h], self.sensor_h, self.sensor_w)
@@ -112,15 +128,16 @@ class Detect(Node):
         self._stop_event = threading.Event()
         self._disp_lock = threading.Lock()
 
-        # 启动绘制线程
         self._draw_thread = threading.Thread(target=self._draw_worker, daemon=True)
-        self._draw_thread.start()
+        if self.thread_flag:
+            self._draw_thread.start()
 
 
         self.timer = self.create_timer(1.0 / 30.0, self.time_callback)
 
 
-        self.data = []
+        # self.data = []
+        # logger info
         self.get_logger().info(f"publisher Name: {self.publisher_topic}")
 
         self.get_logger().info(f"Config Path: {config_path}")
@@ -134,15 +151,21 @@ class Detect(Node):
             self.get_logger().warn("Can't read camera image. it's None")
             return
 
-        nv12_img = np.frombuffer(nv12_img, dtype=np.uint8)
-        bgr_img = cv2.cvtColor(nv12_img.reshape((int(self.h * 1.5), self.w)), cv2.COLOR_YUV2BGR_NV12)
+        # nv12_img = np.frombuffer(nv12_img, dtype=np.uint8)
+        # bgr_img = cv2.cvtColor(nv12_img.reshape((int(self.h * 1.5), self.w)), cv2.COLOR_YUV2BGR_NV12)
+
+        nv12_img = np.frombuffer(nv12_img, dtype=np.uint8).reshape((int(self.h * 1.5), self.w))
+
+        crop_img, self.crop_h, self.crop_w = self._crop_nv12(nv12_img, self.crop_h_ratio, self.crop_resize, self.crop_w_ratio)
+
+        bgr_img = cv2.cvtColor(crop_img, cv2.COLOR_YUV2BGR_NV12)
 
         # Display with bounding boxes (drawn later in publish_msg)
         self.publish_msg(bgr_img)
         
         
     def publish_msg(self, cv_image):
-        input_tensor = self.model.preprocess_yuv420sp(cv_image)
+        input_tensor = self.model.preprocess_yuv420sp(cv_image)     # [self.h*self.crop_h_ratio, self.w*self.crop_w_ratio]
         if input_tensor is None:
             self.get_logger().error("Failed to preprocess image")
             return
@@ -161,7 +184,10 @@ class Detect(Node):
                 continue
 
             bbox = (x1, y1, x2, y2)
-            (x1, y1, x2, y2) = self.scale_mask(bbox)
+            if self.crop_edges:
+                (x1, y1, x2, y2) = self._scale_mask(bbox)
+            else:
+                (x1, y1, x2, y2) = self._scale_crop_mask(bbox)
             # draw_detection(cv_image, bbox, score, class_id)
             mid_x, mid_y = (x1 + x2) // 2, (y1 + y2) // 2
 
@@ -180,27 +206,27 @@ class Detect(Node):
 
             # self.data.append([bbox,det.target_name])
             # self.draw_hardware_rect()
-
-            rect_item = {
-                "type": "rect",
-                "x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2),
-                "thickness": 3, "mode": 1, "color": 0xffff00ff
-            }
-            text_item = {
-                "type": "text",
-                "x": int(x1), "y": int(max(0, y1 - 2)),
-                "text": f"{det.target_name} {score:.2f}",
-                "mode": 1, "color": 0xffff00ff
-            }
-            draw_batch.append(rect_item)
-            draw_batch.append(text_item)
-
+            if self.thread_flag:
+                rect_item = {
+                    "type": "rect",
+                    "x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2),
+                    "thickness": 3, "mode": 1, "color": 0xffff00ff
+                }
+                text_item = {
+                    "type": "text",
+                    "x": int(x1), "y": int(max(0, y1 - 2)),
+                    "text": f"{det.target_name} {score:.2f}",
+                    "mode": 1, "color": 0xffff00ff
+                }
+                draw_batch.append(rect_item)
+                draw_batch.append(text_item)
+            else:
             # Display overlay via hardware
 
-            # self.disp.set_graph_rect(x1, y1, x2, y2, 3, 1, 0xffff00ff)
-            # label = f"{det.target_name} {score:.2f}"
-            # label = label.encode('gb2312')
-            # self.disp.set_graph_word(x1, y1 - 2, label, 3, 1, 0xffff00ff)
+                self.disp.set_graph_rect(x1, y1, x2, y2, 3, 1, 0xffff00ff)
+                label = f"{det.target_name} {score:.2f}"
+                label = label.encode('gb2312')
+                self.disp.set_graph_word(x1, y1 - 2, label, 3, 1, 0xffff00ff)
         
         if len(msg.detections) >=1:
             if len(draw_batch) > 0:
@@ -208,6 +234,7 @@ class Detect(Node):
                     self.draw_queue.put_nowait(draw_batch)
                 except queue.Full:
                     self.get_logger().warning("draw_queue full, dropping this frame's draw batch")
+
             self.publisher.publish(msg)
             # self.get_logger().info("Send successfully")
         # else:
@@ -223,6 +250,9 @@ class Detect(Node):
         self.get_logger().debug(f"msg: {msg}")   
     
     def _draw_worker(self):
+        """
+        hardware draw result point on HDMI
+        """
         while not self._stop_event.is_set():
             try:
                 draw_batch = self.draw_queue.get(timeout=0.2)
@@ -258,6 +288,9 @@ class Detect(Node):
 
 
     def draw_hardware_rect(self):
+        """
+        old function (Deprecated)
+        """
         if self.data is None:
             return
         
@@ -283,8 +316,57 @@ class Detect(Node):
                     bbox[0], bbox[3], label,
                     3, 0, box_color_ARGB)
                 
+    def _crop_nv12(self, nv12, crop_h_ratio, crop_resize=False, crop_w_ratio=None):
+        """
+        crop nv12 img
+        Args:
+            nv12: nv12 img bytes or origin img
+            crop_h_ratio: height crop ratio
+            crop_resize:  crop the image, default: False
+            crop_w_ratio: width crop ratio. default: None
+        Returns:
+            crop_h * crop_h / w * crop_h
+        """
+
+        crop_h = int(self.h * crop_h_ratio)
+        crop_h -= crop_h % 2  # 保证偶数
+        crop_h_margin = (self.h - crop_h) // 2
+
+        if crop_w_ratio is not None:
+            crop_w = int(self.w * crop_w_ratio)
+            crop_w -= crop_w % 2
+            crop_w_margin = (self.w - crop_w) // 2
+        else:
+            crop_w = self.w
+            crop_w_margin = 0
+
+        y_plane = nv12[crop_h_margin:crop_h_margin + crop_h,
+                   crop_w_margin:crop_w_margin + crop_w]
+
+        uv_start = self.h   
+        uv_crop_h_margin = crop_h_margin // 2
+        uv_crop_w_margin = crop_w_margin
+        uv_plane = nv12[uv_start + uv_crop_h_margin : uv_start + uv_crop_h_margin + crop_h // 2,
+                        uv_crop_w_margin:uv_crop_w_margin + crop_w]
+
+
+        if crop_resize:
+            target_w = target_h = self.h
+
+            # 缩放 Y 平面
+            y_plane = cv2.resize(y_plane, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+
+            # 缩放 UV 平面
+            uv_plane = cv2.resize(uv_plane, (target_w, target_h // 2), interpolation=cv2.INTER_LINEAR)
+
+        cropped_nv12 = np.vstack((y_plane, uv_plane))
+
+        return [cropped_nv12, crop_h, crop_w]
 
     def _read_config(self, file_name: str) -> List[Union[list]]:
+        """
+        read yolo_model config
+        """
         try:
             pkg_path = get_package_share_directory('mipi_detect')
         except Exception as e:
@@ -315,9 +397,24 @@ class Detect(Node):
         # cv_image = cv2.imread(image_path)
         return config
 
-    def scale_mask(self, bbox):
+    def _scale_mask(self, bbox):
+        """
+        scale model predict output point value
+        """
         x_scale = 1.0 * (disp_w / self.w)
         y_sclae = 1.0 * (disp_h / self.h)
+
+        x1,x2 = bbox[0]*x_scale, bbox[2]*x_scale
+        y1,y2 = bbox[1]*y_sclae, bbox[3]*y_sclae
+
+        return (int(x1), int(y1), int(x2), int(y2))
+
+    def _scale_crop_mask(self, bbox):
+        """
+        scale crop image output point value
+        """
+        x_scale = 1.0 * (disp_w / self.crop_w)
+        y_sclae = 1.0 * (disp_h / self.crop_h)
 
         x1,x2 = bbox[0]*x_scale, bbox[2]*x_scale
         y1,y2 = bbox[1]*y_sclae, bbox[3]*y_sclae
