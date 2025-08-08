@@ -1,10 +1,10 @@
 yolo_detect:
   ros__parameters:
-    multi_threading: False
-    crop_edges: False
-    crop_h_ratio: 0.8
-    crop_resize: False
-    crop_w_ratio: 1
+    # multi_threading: False
+    # crop_edges: False
+    # crop_h_ratio: 0.8
+    # crop_resize: False
+    # crop_w_ratio: 1
 
     yolo_detect_config_file: "config.json"
     pushlisher_node_name: "yolo_detections"

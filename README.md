@@ -25,3 +25,5 @@ ros2 topic pub /yolo_detections identify/msg/YoloDetections "{stamp: {sec: 123, 
 	"reg_max": 16
 }
 ```
+
+627
