@@ -315,7 +315,7 @@ class BirdFilter:
 
         self.bird_votes[gid].append(1 if is_bird_now else 0)
         ratio = sum(self.bird_votes[gid]) / (len(self.bird_votes[gid]) + 1e-9)
-        # 如果投票比例大于阈值并且有足够帧数，判为鸟
+
         if len(self.bird_votes[gid]) >= max(3, self.vote_len//2) and ratio >= self.vote_thresh:
             return True
         return False

@@ -32,6 +32,7 @@ from identify.msg import YoloDetection, YoloDetections
 
 sensor_width = 1920
 sensor_height = 1080
+
 # names = ["drone"]
 names = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light", 

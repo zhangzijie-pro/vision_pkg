@@ -35,8 +35,8 @@
 
 # sensor_width = 1920
 # sensor_height = 1080
-# # names = ["drone"]
-# names = [
+# names_class1 = ["drone"]
+# names_class80 = [
 #     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light", 
 #     "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", 
 #     "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", 
@@ -85,6 +85,7 @@
 
 # class Detect(Node):
 #     def __init__(self, name="mipi_detect_node"):
+#         global names
 #         super().__init__(name)
 
 #         # Declare parameters
@@ -115,6 +116,8 @@
         
 #         self.camera = libsrcampy.Camera()
 #         self.model_config= self._read_config(config_path)
+#         names = names_class1 if self.model_config[1]==1 else names_class80
+
 #         self.model = YOLOv8_Detect(*self.model_config)
 #         self.model_path = self.model_config[0]
 #         self.score_thres = self.model_config[3]
@@ -452,19 +455,6 @@
 #         node.destroy_node()
 #         rclpy.shutdown()
 
-# Copyright (c) 2024，Zhangzijie.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import json
 from typing import List, Union
@@ -486,8 +476,9 @@ from identify.msg import YoloDetection, YoloDetections
 
 sensor_width = 1920
 sensor_height = 1080
-# names = ["drone"]
-names = [
+
+names_class1 = ["drone"]
+names_class80 = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light", 
     "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", 
     "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", 
@@ -531,6 +522,7 @@ disp_w, disp_h = get_display_res()
 class Detect(Node):
     def __init__(self, name="mipi_detect_node"):
         super().__init__(name)
+        global names 
 
         # Declare parameters
         self.declare_parameter('yolo_detect_config_file', 'config.json')
@@ -551,6 +543,7 @@ class Detect(Node):
         
         self.camera = libsrcampy.Camera()
         self.model_config= self._read_config(config_path)
+        names = names_class1 if self.model_config[1]==1 else names_class80
         self.model = YOLOv8_Detect(*self.model_config)
         self.model_path = self.model_config[0]
         self.score_thres = self.model_config[3]
@@ -684,9 +677,9 @@ class Detect(Node):
                 
 
     def _read_config(self, file_name: str) -> List[Union[list]]:
-        # 获取安装路径
+
         try:
-            pkg_path = get_package_share_directory('mipi_detect')  # ← 你实际的包名
+            pkg_path = get_package_share_directory('mipi_detect')
         except Exception as e:
             self.get_logger().error(f"Could not find package path: {e}")
             raise e

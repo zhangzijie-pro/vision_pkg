@@ -26,6 +26,7 @@ logging.basicConfig(
     format = '[%(name)s] [%(asctime)s.%(msecs)03d] [%(levelname)s] %(message)s',
     datefmt='%H:%M:%S')
 logger = logging.getLogger("RDK_YOLO")
+logger.disabled = True
 
 # coco_names = ["drone"]
 coco_names = [
