@@ -24,6 +24,7 @@
 # from sensor_msgs.msg import CompressedImage
 # from ament_index_python.packages import get_package_share_directory
 # import os
+# import sys
 # from hobot_vio import libsrcampy
 
 # import threading
@@ -32,6 +33,9 @@
 
 # from .lib import YOLOv8_Detect, draw_detection
 # from identify.msg import YoloDetection, YoloDetections
+
+# sys.path.append('../../ByteTrack')
+# from ByteTrack.yolox.tracker.byte_tracker import BYTETracker
 
 # sensor_width = 1920
 # sensor_height = 1080
@@ -113,8 +117,11 @@
 #             "/yolo_detections",
 #             10
 #         )
-        
-#         self.camera = libsrcampy.Camera()
+        # self.byte_tracker = BYTETracker(self._byte_tracker_args(), frame_rate=30)
+        # self.trajectories = {}
+        # self.max_traj_len = 10
+
+        # self.camera = libsrcampy.Camera()
 #         self.model_config= self._read_config(config_path)
 #         names = names_class1 if self.model_config[1]==1 else names_class80
 
@@ -180,6 +187,14 @@
         
         
 #     def publish_msg(self, cv_image):
+        # """
+        # pushlish origin yolo result
+        # Returns:
+        #     msg:
+        #         YoloDetections()
+
+        #         YoloDetection()
+        # """
 #         input_tensor = self.model.preprocess_yuv420sp(cv_image)     # [self.h*self.crop_h_ratio, self.w*self.crop_w_ratio]
 #         if input_tensor is None:
 #             self.get_logger().error("Failed to preprocess image")
@@ -264,6 +279,113 @@
 
 #         self.get_logger().debug(f"msg: {msg}")   
     
+    # def publish_tracker_msg(self, cv_image):
+    #     """
+    #     publish byte_tracker msg
+        
+    #     Returns:
+    #         msg:
+    #             YoloDetections()
+
+    #             YoloDetection()
+    #     """
+    #     input_tensor = self.model.preprocess_yuv420sp(cv_image)
+    #     if input_tensor is None:
+    #         self.get_logger().error("Failed to preprocess image")
+    #         return
+
+    #     outputs = self.model.c2numpy(self.model.forward(input_tensor))
+    #     results = self.model.postProcess(outputs)
+
+    #     draw_batch = []
+    #     msg = YoloDetections()
+    #     msg.stamp = self.get_clock().now().to_msg()
+    #     msg.detections = []
+
+    #     detections_for_tracker = []
+    #     class_ids = []
+
+    #     for class_id, score, x1, y1, x2, y2 in results:
+    #         if score < self.score_thres:
+    #             continue
+
+    #         bbox = (x1, y1, x2, y2)
+    #         (x1, y1, x2, y2) = self.scale_mask(bbox)
+
+    #         target_name = names[class_id] if class_id < len(names) else f"class_{class_id}"
+
+    #         if target_name == 'person':
+    #             detections_for_tracker.append([x1, y1, x2, y2, score])
+    #             class_ids.append(class_id)
+            
+
+    #     detections_for_tracker = np.array(detections_for_tracker, dtype=np.float32)
+    #     tracks = self.byte_tracker.update(detections_for_tracker, img_info=cv_image.shape, img_size=cv_image.shape)
+
+        # for track in tracks:
+        #     box = track.tlbr
+        #     track_id = track.track_id
+        #     center = (int((box[0]+box[2]) / 2), int((box[1]+box[3]) / 2))
+
+        #     if track_id not in self.trajectories:
+        #         self.trajectories[track_id] = []
+        #     self.trajectories[track_id].append(center)
+        #     if len(self.trajectories[track_id]) > self.max_traj_len:
+        #         self.trajectories[track_id] = self.trajectories[track_id][-self.max_traj_len]
+            
+        #     if len(detections_for_tracker)>0:
+        #         ious = self.iou(box, detections_for_tracker[:,:4])
+        #         max_index = np.argmax(ious)
+        #         class_id = class_ids[max_index]
+        #     else:
+        #         class_id = -1
+            
+        #     det = YoloDetection()
+        #     det.class_id = class_id
+        #     det.target_name = names[class_id] if class_id < len(names) else f"class_{class_id}"
+        #     det.confidence = float(detections_for_tracker[max_index][4]) if len(detections_for_tracker) > 0 else 0
+        #     det.cx, det.cy = center
+        #     det.image_height, det.image_width = cv_image.shape[:2]
+        #     det.x_min, det.y_min, det.x_max, det.y_max = map(int, box)
+        #     msg.detections.append(det)
+
+        #     if self.thread_flag:
+        #         rect_item = {
+        #             "type": "rect",
+        #             "x1": int(box[0]), "y1": int(box[1]), "x2": int(box[2]), "y2": int(box[3]),
+        #             "thickness": 3, "mode": 1, "color": 0xffff00ff
+        #         }
+        #         label = f"{det.target_name}#{track_id} {det.confidence:.2f}"
+
+        #         text_item = {
+        #             "type": "text",
+        #             "x": int(box[0]), "y": int(box[1])-2,
+        #             "text": label.encode('gb2312'),
+        #             "mode": 1, "color": 0xffff00ff
+        #         }
+        #         draw_batch.append(rect_item)
+        #         draw_batch.append(text_item)
+        #     else:
+        #         self.disp.set_graph_rect(int(box[0]), int(box[1]), int(box[2]), int(box[3]), 3, 1, 0xffff00ff)
+        #         label = f"{det.target_name}#{track_id} {det.confidence:.2f}"
+        #         self.disp.set_graph_word(int(box[0]), int(box[1]) - 2, label.encode('gb2312'), 3, 1, 0xffff00ff)
+
+        #     traj_points = self.trajectories[track_id]
+        #     for i in range(1, len(traj_points)):
+        #         self.disp.set_graph_line(traj_points[i-1][0], traj_points[i-1][1],
+        #                             traj_points[i][0], traj_points[i][1],
+        #                             3, 1, 0x00ff00ff)
+            
+    #     if len(msg.detections) >=1:
+    #         if len(draw_batch) > 0:
+    #             try:
+    #                 self.draw_queue.put_nowait(draw_batch)
+    #             except queue.Full:
+    #                 self.get_logger().warning("draw_queue full, dropping this frame's draw batch")
+    #         self.publisher.publish(msg)
+
+    #     self.get_logger().info(f"msg: {msg}")   
+
 #     def _draw_worker(self):
 #         """
 #         hardware draw result point on HDMI
@@ -436,6 +558,25 @@
 
 #         return (int(x1), int(y1), int(x2), int(y2))
 
+    # def _byte_tracker_args(self):
+    #     class Args:
+    #         track_thresh = 0.25
+    #         track_buffer = 30
+    #         match_thresh = 0.8
+    #         aspect_ratio_thresh = 3.0
+    #         min_box_area = 1.0
+    #         mot20 = False
+    #     return Args()
+
+    # def iou(self, box, boxes):
+    #     xy_max = np.minimum(boxes[:, 2:], box[2:])
+    #     xy_min = np.maximum(boxes[:, :2], box[:2])
+    #     inter = np.clip(xy_max - xy_min, a_min=0, a_max=np.inf)
+    #     inter = inter[:, 0] * inter[:, 1]
+    #     area_boxes = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    #     area_box = (box[2] - box[0]) * (box[3] - box[1])
+    #     return inter / (area_box + area_boxes - inter)
+
 
 #     def destroy_node(self):
 #         self.camera.close_cam()
@@ -468,11 +609,15 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
 from ament_index_python.packages import get_package_share_directory
 import os
+import sys
 from hobot_vio import libsrcampy
 
 
 from .lib import YOLOv8_Detect, draw_detection
 from identify.msg import YoloDetection, YoloDetections
+
+sys.path.append('../../ByteTrack')
+from ByteTrack.yolox.tracker.byte_tracker import BYTETracker
 
 sensor_width = 1920
 sensor_height = 1080
@@ -541,6 +686,10 @@ class Detect(Node):
             10
         )
         
+        self.byte_tracker = BYTETracker(self._byte_tracker_args(), frame_rate=30)
+        self.trajectories = {}
+        self.max_traj_len = 10
+
         self.camera = libsrcampy.Camera()
         self.model_config= self._read_config(config_path)
         names = names_class1 if self.model_config[1]==1 else names_class80
@@ -588,6 +737,14 @@ class Detect(Node):
         
         
     def publish_msg(self, cv_image):
+        """
+        pushlish origin yolo result
+        Returns:
+            msg:
+                YoloDetections()
+
+                YoloDetection()
+        """
         input_tensor = self.model.preprocess_yuv420sp(cv_image)
         if input_tensor is None:
             self.get_logger().error("Failed to preprocess image")
@@ -620,8 +777,8 @@ class Detect(Node):
             if det.target_name == 'person':
                 msg.detections.append(det)
 
-            self.get_logger().info(f"name: {det.target_name}")
-            self.get_logger().info(f"x1: {x1}, y1: {y1}, x2: {x2}, y2: {y2}")
+            self.get_logger().debug(f"name: {det.target_name}")
+            self.get_logger().debug(f"x1: {x1}, y1: {y1}, x2: {x2}, y2: {y2}")
             
 
             # self.data.append([bbox,det.target_name])
@@ -647,7 +804,101 @@ class Detect(Node):
         #     msg.detections.append(det)
         #     self.publisher.publish(msg)
 
-        self.get_logger().info(f"msg: {msg}")   
+        self.get_logger().debug(f"msg: {msg}")   
+
+
+    def publish_tracker_msg(self, cv_image):
+        """
+        publish byte_tracker msg
+        
+        Returns:
+            msg:
+                YoloDetections()
+
+                YoloDetection()
+        """
+        input_tensor = self.model.preprocess_yuv420sp(cv_image)
+        if input_tensor is None:
+            self.get_logger().error("Failed to preprocess image")
+            return
+
+        outputs = self.model.c2numpy(self.model.forward(input_tensor))
+        results = self.model.postProcess(outputs)
+
+        msg = YoloDetections()
+        msg.stamp = self.get_clock().now().to_msg()
+        msg.detections = []
+
+        detections_for_tracker = []
+        class_ids = []
+
+        for class_id, score, x1, y1, x2, y2 in results:
+            if score < self.score_thres:
+                continue
+
+            bbox = (x1, y1, x2, y2)
+            (x1, y1, x2, y2) = self.scale_mask(bbox)
+
+            target_name = names[class_id] if class_id < len(names) else f"class_{class_id}"
+
+            if target_name == 'person':
+                detections_for_tracker.append([x1, y1, x2, y2, score])
+                class_ids.append(class_id)
+            
+
+        detections_for_tracker = np.array(detections_for_tracker, dtype=np.float32)
+
+        # ======================  ! ! !  =========================
+        tracks = self.byte_tracker.update(
+            detections_for_tracker, 
+            img_info=cv_image.shape, 
+            img_size=cv_image.shape
+        )
+
+        for track in tracks:
+            box = track.tlbr
+            track_id = track.track_id
+            center = (int((box[0]+box[2]) / 2), int((box[1]+box[3]) / 2))
+
+            if track_id not in self.trajectories:
+                self.trajectories[track_id] = []
+            self.trajectories[track_id].append(center)
+            if len(self.trajectories[track_id]) > self.max_traj_len:
+                self.trajectories[track_id] = self.trajectories[track_id][-self.max_traj_len]
+            
+            if len(detections_for_tracker)>0:
+                ious = self.iou(box, detections_for_tracker[:,:4])
+                max_index = np.argmax(ious)
+                class_id = class_ids[max_index]
+            
+            else:
+                class_id = -1
+            
+            det = YoloDetection()
+            det.class_id = class_id
+            det.target_name = names[class_id] if class_id < len(names) else f"class_{class_id}"
+            det.confidence = float(detections_for_tracker[max_index][4]) if len(detections_for_tracker) > 0 else 0
+            det.cx, det.cy = center
+            det.image_height, det.image_width = cv_image.shape[:2]
+            det.x_min, det.y_min, det.x_max, det.y_max = map(int, box)
+            msg.detections.append(det)
+
+
+            self.disp.set_graph_rect(int(box[0]), int(box[1]), int(box[2]), int(box[3]), 3, 1, 0xffff00ff)
+            label = f"{det.target_name}#{track_id} {det.confidence:.2f}"
+            self.disp.set_graph_word(int(box[0]), int(box[1]) - 2, label.encode('gb2312'), 3, 1, 0xffff00ff)
+
+            traj_points = self.trajectories[track_id]
+            for i in range(1, len(traj_points)):
+                self.disp.set_graph_line(traj_points[i-1][0], traj_points[i-1][1],
+                                    traj_points[i][0], traj_points[i][1],
+                                    3, 1, 0x00ff00ff)
+            
+        if len(msg.detections) >=1:
+            self.publisher.publish(msg)
+
+        self.get_logger().debug(f"msg: {msg}")   
+
 
     def draw_hardware_rect(self):
         if self.data is None:
@@ -710,12 +961,31 @@ class Detect(Node):
 
     def scale_mask(self, bbox):
         x_scale = 1.0 * (disp_w / self.w)
-        y_sclae = 1.0 * (disp_h / self.h)
+        y_scale = 1.0 * (disp_h / self.h)
 
         x1,x2 = bbox[0]*x_scale, bbox[2]*x_scale
-        y1,y2 = bbox[1]*y_sclae, bbox[3]*y_sclae
+        y1,y2 = bbox[1]*y_scale, bbox[3]*y_scale
 
         return (int(x1), int(y1), int(x2), int(y2))
+
+    def _byte_tracker_args(self):
+        class Args:
+            track_thresh = 0.25
+            track_buffer = 30
+            match_thresh = 0.8
+            aspect_ratio_thresh = 3.0
+            min_box_area = 1.0
+            mot20 = False
+        return Args()
+
+    def iou(self, box, boxes):
+        xy_max = np.minimum(boxes[:, 2:], box[2:])
+        xy_min = np.maximum(boxes[:, :2], box[:2])
+        inter = np.clip(xy_max - xy_min, a_min=0, a_max=np.inf)
+        inter = inter[:, 0] * inter[:, 1]
+        area_boxes = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+        area_box = (box[2] - box[0]) * (box[3] - box[1])
+        return inter / (area_box + area_boxes - inter)
 
 
     def destroy_node(self):
