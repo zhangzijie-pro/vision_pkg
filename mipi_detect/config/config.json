@@ -2,6 +2,6 @@
 	"model_path": "/app/pydev_demo/yolov8n_detect_bayese_640x640_nv12_modified.bin",
 	"class_num": 80,
 	"nms_threshold": 0.7,
-	"score_threshold": 0.25,
+	"score_threshold": 0.6,
 	"reg_max": 16
 }
