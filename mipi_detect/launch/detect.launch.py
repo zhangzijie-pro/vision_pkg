@@ -22,7 +22,7 @@ def generate_launch_description():
     yolo_detect_path = os.path.join(package_path, 'lib/mipi_detect')
     config_src = os.path.join(yolo_detect_path, 'config')
     config_dst = os.path.join(os.getcwd(), 'config')
-    os.system(f"cp -r {config_src} {config_dst}")
+    # os.system(f"cp -r {config_src} {config_dst}")
 
     # 关闭HDMI默认界面显示
     os.system("sudo systemctl stop lightdm")
