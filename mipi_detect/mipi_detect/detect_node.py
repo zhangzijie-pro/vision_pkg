@@ -867,7 +867,7 @@ class Detect(Node):
             else:
                 class_id = -1
             
-            if class_id == 0:
+            if class_id == 62:
                 det = YoloDetection()
                 det.class_id = class_id
                 det.target_name = names[class_id] if class_id < len(names) else f"class_{class_id}"
