@@ -615,7 +615,7 @@ from hobot_vio import libsrcampy
 from .lib import YOLOv8_Detect, draw_detection
 from identify.msg import YoloDetection, YoloDetections
 
-from .yolox.tracker.byte_tracker import BYTETracker
+from .tracker.byte_tracker import BYTETracker
 
 sensor_width = 1920
 sensor_height = 1080
@@ -838,8 +838,10 @@ class Detect(Node):
             detections_for_tracker.append([x1, y1, x2, y2, score])
             class_ids.append(class_id)
             
-
-        detections_for_tracker = np.array(detections_for_tracker, dtype=np.float32)
+        if detections_for_tracker:
+            detections_for_tracker = np.array(detections_for_tracker, dtype=np.float32)
+        else:
+            detections_for_tracker = np.empty((0, 5), dtype=np.float32)
 
         # ======================  ! ! !  =========================
         tracks = self.byte_tracker.update(
@@ -856,17 +858,18 @@ class Detect(Node):
             if track_id not in self.trajectories:
                 self.trajectories[track_id] = []
             self.trajectories[track_id].append(center)
+
             if len(self.trajectories[track_id]) > self.max_traj_len:
-                self.trajectories[track_id] = self.trajectories[track_id][-self.max_traj_len]
+                self.trajectories[track_id] = self.trajectories[track_id][-self.max_traj_len:]
             
             if len(detections_for_tracker)>0:
                 ious = self.iou(box, detections_for_tracker[:,:4])
                 max_index = np.argmax(ious)
                 class_id = class_ids[max_index]
-            
             else:
                 class_id = -1
             
+
             if class_id == 62:
                 det = YoloDetection()
                 det.class_id = class_id
@@ -879,8 +882,8 @@ class Detect(Node):
 
 
             self.disp.set_graph_rect(int(box[0]), int(box[1]), int(box[2]), int(box[3]), 3, 1, 0xffff00ff)
-            label = f"{det.target_name}#{track_id} {det.confidence:.2f}"
-            self.disp.set_graph_word(int(box[0]), int(box[1]) - 2, label.encode('gb2312'), 3, 1, 0xffff00ff)
+            # label = f"{det.target_name}#{track_id} {det.confidence:.2f}"
+            # self.disp.set_graph_word(int(box[0]), int(box[1]) - 2, label.encode('gb2312'), 3, 1, 0xffff00ff)
 
             traj_points = self.trajectories[track_id]
             for i in range(1, len(traj_points)):
