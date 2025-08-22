@@ -1,4 +1,4 @@
-yolo_detect:
+mipi_detect:
   ros__parameters:
     # multi_threading: False
     # crop_edges: False

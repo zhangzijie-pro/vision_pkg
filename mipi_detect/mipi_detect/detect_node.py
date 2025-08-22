@@ -885,11 +885,12 @@ class Detect(Node):
             # label = f"{det.target_name}#{track_id} {det.confidence:.2f}"
             # self.disp.set_graph_word(int(box[0]), int(box[1]) - 2, label.encode('gb2312'), 3, 1, 0xffff00ff)
 
-            traj_points = self.trajectories[track_id]
-            for i in range(1, len(traj_points)):
-                self.disp.set_graph_line(traj_points[i-1][0], traj_points[i-1][1],
-                                    traj_points[i][0], traj_points[i][1],
-                                    3, 1, 0x00ff00ff)
+            # draw point line to show trajectory
+            # traj_points = self.trajectories[track_id]
+            # for i in range(1, len(traj_points)):
+            #     self.disp.set_graph_line(traj_points[i-1][0], traj_points[i-1][1],
+            #                         traj_points[i][0], traj_points[i][1],
+            #                         3, 1, 0x00ff00ff)
             
         if len(msg.detections) >=1:
             self.publisher.publish(msg)
