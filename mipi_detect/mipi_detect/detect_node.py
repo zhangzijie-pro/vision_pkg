@@ -620,6 +620,9 @@ from .tracker.byte_tracker import BYTETracker
 sensor_width = 1920
 sensor_height = 1080
 
+
+log_file = "$HOME/detect_log.log"
+
 names_class1 = ["drone"]
 names_class80 = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light", 
@@ -714,7 +717,7 @@ class Detect(Node):
 
         self.data = []
         self.get_logger().info(f"publisher Name: {self.publisher_topic}")
-
+        
         self.get_logger().info(f"Config Path: {config_path}")
         self.get_logger().info(f"display width: {disp_w}, display height: {disp_h}")
         
@@ -793,13 +796,20 @@ class Detect(Node):
         
         if len(msg.detections) >=1:
             self.publisher.publish(msg)
+            self.record_time(msg)
         else:
             msg.detect_flag = False
             self.publisher.publish(msg)
+            self.record_time(msg)
 
         # self.get_logger().debug(f"msg: {msg}")   
 
 
+    def record_time(msg):
+        with open(log_file, mode="w") as f:
+            f.write(f"{msg.stamp} \n")
+        
+        
     def publish_tracker_msg(self, cv_image):
         """
         publish byte_tracker msg
