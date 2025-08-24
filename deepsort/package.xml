@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>vision_pkg_deepsort</name>
+  <version>0.1.0</version>
+  <description>RDK X5 DeepSORT lock-on tracking with libsrcampy camera</description>
+  <maintainer email="devnull@example.com">zhangzijie-pro</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+</package>

@@ -1,2 +1,4 @@
 lap
 cython_bbox
+deep-sort-realtime 
+filterpy
