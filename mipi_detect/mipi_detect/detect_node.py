@@ -34,7 +34,7 @@
 # from .lib import YOLOv8_Detect, draw_detection
 # from identify.msg import YoloDetection, YoloDetections
 
-# from .yolox.tracker.byte_tracker import BYTETracker
+# from .tracker.byte_tracker import BYTETracker
 
 # sensor_width = 1920
 # sensor_height = 1080
@@ -183,7 +183,7 @@
 
 #         # Display with bounding boxes (drawn later in publish_msg)
 #         self.publish_msg(bgr_img)
-        
+#         self.publish_tracker_msg(bgr_img)
         
 #     def publish_msg(self, cv_image):
         # """
@@ -317,8 +317,11 @@
     #             detections_for_tracker.append([x1, y1, x2, y2, score])
     #             class_ids.append(class_id)
             
+    #     if detections_for_tracker:
+            # detections_for_tracker = np.array(detections_for_tracker, dtype=np.float32)
+    #     else:
+            #   detections_for_tracker = np.empty((0, 5), dtype=np.float32)
 
-    #     detections_for_tracker = np.array(detections_for_tracker, dtype=np.float32)
     #     tracks = self.byte_tracker.update(detections_for_tracker, img_info=cv_image.shape, img_size=cv_image.shape)
 
         # for track in tracks:
