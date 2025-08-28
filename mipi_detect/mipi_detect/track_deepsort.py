@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Copyright (c) 2024，Zhangzijie.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 订阅:
   /yolo_detections (identify/msg/YoloDetections)
@@ -18,6 +31,7 @@
   use_embedder: bool = True        # 有图像帧时启用外观嵌入；无图像自动退化
   embedder_half: bool = True
   image_topic: str = "/image_raw"  # 可按你的相机topic调整
+  yolo_msg: str = "yolo_detections"
   k_yaw: float = 0.003             # 像素误差->角速度
   k_z: float = 0.6                 # 面积误差->前后速度
   target_area_ref: float = 0.05    # 期望bbox面积/画面面积
@@ -46,9 +60,8 @@ from sensor_msgs.msg import Image
 
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
-# 你的自定义消息
 try:
-    from identify.msg import YoloDetections  # 格式由你的包定义
+    from identify.msg import YoloDetections
 except Exception:
     YoloDetections = None
 
@@ -85,6 +98,7 @@ class DeepSortUAVNode(Node):
         self.declare_parameter("use_embedder", True)
         self.declare_parameter("embedder_half", True)
         self.declare_parameter("image_topic", "/image_raw")
+        self.declare_parameter("yolo_msg", "/yolo_detections")
         self.declare_parameter("k_yaw", 0.003)
         self.declare_parameter("k_z", 0.6)
         self.declare_parameter("target_area_ref", 0.05)
@@ -101,6 +115,7 @@ class DeepSortUAVNode(Node):
         self.use_embedder: bool = bool(self.get_parameter("use_embedder").value)
         self.embedder_half: bool = bool(self.get_parameter("embedder_half").value)
         self.image_topic: str = str(self.get_parameter("image_topic").value)
+        self.yolo_msg: str = str(self.get_parameter("yolo_msg").value)
         self.k_yaw: float = float(self.get_parameter("k_yaw").value)
         self.k_z: float = float(self.get_parameter("k_z").value)
         self.area_ref: float = float(self.get_parameter("target_area_ref").value)
@@ -129,8 +144,7 @@ class DeepSortUAVNode(Node):
             depth=5,
         )
 
-        # ===== 话题 =====
-        self.sub_det = self.create_subscription(YoloDetections, "/yolo_detections", self.on_dets, qos)
+        self.sub_det = self.create_subscription(YoloDetections, self.yolo_msg, self.on_dets, qos)
 
         self.pub_tracks = self.create_publisher(String, "/yolo_tracks", 10)
         self.pub_markers = self.create_publisher(MarkerArray, "/tracking_markers", 10)
@@ -197,7 +211,7 @@ class DeepSortUAVNode(Node):
         # 没有候选，清空可视化&停止控制
         if not dets_input:
             self._publish_tracks([])
-            self._publish_markers([])
+            # self._publish_markers([])
             self._queue_stop_cmd()
             return
 
@@ -349,6 +363,3 @@ def main(args=None):
         pass
     node.destroy_node()
     rclpy.shutdown()
-
-if __name__ == "__main__":
-    main()

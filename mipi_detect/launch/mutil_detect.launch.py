@@ -27,12 +27,12 @@ def generate_launch_description():
     # 关闭HDMI默认界面显示
     os.system("sudo systemctl stop lightdm")
     
-    param_file = os.path.join(config_dst, 'params.yaml')
+    param_file = os.path.join(config_dst, 'm_params.yaml')
 
     return LaunchDescription([
         Node(
             package='mipi_detect',
-            executable='mipi_detect_node',
+            executable='mutil_thread_crop_detect_node',
             output='screen',
             parameters=[param_file],
             arguments=['--ros-args', '--log-level', 'info']

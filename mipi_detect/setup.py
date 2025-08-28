@@ -26,6 +26,8 @@ setup(
     entry_points={
         'console_scripts': [
             'mipi_detect_node = mipi_detect.detect_node:main',
+            'track_deepsort = mipi_detect.track_deepsort:main',
+            'mutil_thread_crop_detect_node = mipi_detect.detect_crop_thread_node:main'
         ],
     },
 )

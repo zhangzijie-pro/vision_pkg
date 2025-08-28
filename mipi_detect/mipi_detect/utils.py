@@ -45,3 +45,21 @@ def hist_distance(h1, h2):
         return 1.0
     # Bhattacharyya distance
     return float(cv2.compareHist(h1.astype('float32'), h2.astype('float32'), cv2.HISTCMP_BHATTACHARYYA))
+
+def scale_mask(bbox, disp_w=1920, disp_h=1080, Input_w=640, Input_h=640):
+    x_scale = 1.0 * (disp_w / Input_w)
+    y_scale = 1.0 * (disp_h / Input_h)
+
+    x1,x2 = bbox[0]*x_scale, bbox[2]*x_scale
+    y1,y2 = bbox[1]*y_scale, bbox[3]*y_scale
+
+    return (int(x1), int(y1), int(x2), int(y2))
+
+def disp_to_640_mask(bbox, disp_w=1920, disp_h=1080, Input_w=640, Input_h=640):
+    x_scale = 1.0 * (Input_w / disp_w )
+    y_scale = 1.0 * (Input_h / disp_h)
+
+    x1,x2 = bbox[0]*x_scale, bbox[2]*x_scale
+    y1,y2 = bbox[1]*y_scale, bbox[3]*y_scale
+
+    return (int(x1), int(y1), int(x2), int(y2))
