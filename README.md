@@ -1,10 +1,38 @@
 # vision_pkg
 
+- backup: old code
 - identify:  msg pkg
-- yolo_detect: yolo model detect 
-- mipi_camera : cam
-- HDMI-Display: 
-- robot_bringup: 
+- mipi_detect: yolo model detect 
+```bash
+├── LICENSE
+├── config
+│   ├── config.json
+│   ├── m_params.yaml
+│   └── params.yaml
+├── launch
+│   ├── detect.launch.py
+│   └── mutil_detect.launch.py
+├── mipi_detect
+│   ├── __init__.py
+│   ├── detect_crop_thread_node.py
+│   ├── detect_node.py
+│   ├── lib.py
+│   ├── track_deepsort.py
+│   ├── tracker
+│   │   ├── __init__.py
+│   │   ├── basetrack.py
+│   │   ├── byte_tracker.py
+│   │   ├── kalman_filter.py
+│   │   └── matching.py
+│   └── utils.py
+├── package.xml
+├── resource
+│   └── mipi_detect
+├── setup.cfg
+├── setup.py
+└── test
+```
+- tools: pid code
 
 ## close HDMI 
 ``` bash
@@ -26,4 +54,7 @@ ros2 topic pub /yolo_detections identify/msg/YoloDetections "{stamp: {sec: 123, 
 }
 ```
 
-627
+```bash
+source export.sh      # 导出install/config内容到{$PKG_NAME}_config
+source back_in.sh	  # copy修改后的config内容到install
+```

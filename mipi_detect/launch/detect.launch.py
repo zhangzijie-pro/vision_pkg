@@ -37,11 +37,11 @@ def generate_launch_description():
             parameters=[param_file],
             arguments=['--ros-args', '--log-level', 'info']
         ),
-        Node(
-            package='mipi_detect',
-            executable='track_deepsort',
-            output='screen',
-            parameters=[param_file],
-            arguments=['--ros-args', '--log-level', 'info']
-        )
+        # Node(
+        #     package='mipi_detect',
+        #     executable='track_deepsort',
+        #     output='screen',
+        #     parameters=[param_file],
+        #     arguments=['--ros-args', '--log-level', 'info']
+        # )
     ])
