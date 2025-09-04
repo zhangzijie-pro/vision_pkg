@@ -111,7 +111,7 @@ class Detect(Node):
 
         self.publisher = self.create_publisher(
             YoloDetections,
-            "/yolo_detections",
+            self.publisher_topic,
             10
         )
         self.pub_raw = self.create_publisher(
@@ -243,9 +243,11 @@ class Detect(Node):
         # self.get_logger().debug(f"msg: {msg}")   
 
 
-    def record_time(msg):
-        with open(log_file, mode="w") as f:
-            f.write(f"{msg.stamp} \n")
+    def record_time(self, msg):
+        path = os.path.expandvars(log_file)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, mode="a", encoding="utf-8") as f:
+            f.write(f"{msg.stamp.sec}.{str(msg.stamp.nanosec).zfill(9)}\n")
         
         
     def publish_tracker_msg(self, cv_image):
