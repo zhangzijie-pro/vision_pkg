@@ -4,21 +4,21 @@ mipi_detect_node:
     pushlisher_node_name: "yolo_detections"
     publisher_img_topic_name: "image_raw"
 
-track_deepsort:
-  ros__parameters:
-    target_class: "person"
-    score_threshold: 0.25
-    max_age: 30
-    n_init: 3
-    max_cosine_distance: 0.2
-    use_embedder: True
-    embedder_half: True
-    image_topic: "/image_raw"
-    yolo_msg: "yolo_detections"
-    k_yaw: 0.003
-    k_z: 0.6
-    target_area_ref: 0.05
-    relock_on_lost: True
-    cmd_rate_hz: 30.0
-    marker_text_size: 20.0
-    debug_log: False
+# track_deepsort:
+#   ros__parameters:
+#     target_class: "person"
+#     score_threshold: 0.25
+#     max_age: 30
+#     n_init: 3
+#     max_cosine_distance: 0.2
+#     use_embedder: True
+#     embedder_half: True
+#     image_topic: "/image_raw"
+#     yolo_msg: "yolo_detections"
+#     k_yaw: 0.003
+#     k_z: 0.6
+#     target_area_ref: 0.05
+#     relock_on_lost: True
+#     cmd_rate_hz: 30.0
+#     marker_text_size: 20.0
+#     debug_log: False

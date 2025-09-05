@@ -13,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
 """
 订阅:
   /yolo_detections (identify/msg/YoloDetections)
@@ -125,7 +127,6 @@ class DeepSortUAVNode(Node):
         self.debug_log: bool = bool(self.get_parameter("debug_log").value)
 
         # ===== DeepSORT =====
-        # 使用 mobilenet 嵌入器（轻量、RDK X5 友好）；无图像时，DeepSORT自动退化到IoU/卡尔曼
         self.tracker = DeepSort(
             max_age=self.max_age,
             n_init=self.n_init,
