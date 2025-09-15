@@ -2,7 +2,7 @@
 
 int32 id
 
-string class
+string label
 
 float32 confidence
 

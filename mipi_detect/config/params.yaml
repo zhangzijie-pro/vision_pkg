@@ -1,24 +1,24 @@
 mipi_detect_node:
   ros__parameters:
-    yolo_detect_config_file: "config.json"
-    pushlisher_node_name: "yolo_detections"
-    publisher_img_topic_name: "image_raw"
+  yolo_detect_config_file: "config.json"
+  pushlisher_node_name: "yolo_detections"
+  publisher_img_topic_name: "image_raw"
+
+servo_node:
+  ros__parameters:
+  queue_size: 2
+  img_height: 1080
+  subscription_topic: "/yolo_detections"
 
 # track_deepsort:
-#   ros__parameters:
-#     target_class: "person"
-#     score_threshold: 0.25
-#     max_age: 30
-#     n_init: 3
-#     max_cosine_distance: 0.2
-#     use_embedder: True
-#     embedder_half: True
-#     image_topic: "/image_raw"
-#     yolo_msg: "yolo_detections"
-#     k_yaw: 0.003
-#     k_z: 0.6
-#     target_area_ref: 0.05
-#     relock_on_lost: True
-#     cmd_rate_hz: 30.0
-#     marker_text_size: 20.0
-#     debug_log: False
+  # ros__parameters:
+  # target_class: "person"
+  # score_threshold: 0.25
+  # max_age: 30
+  # n_init: 3
+  # max_cosine_distance: 0.2
+  # use_embedder: True
+  # embedder_half: True
+  # image_topic: "/image_raw"
+  # yolo_msg: "yolo_detections"
+  # debug_log: False
